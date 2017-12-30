@@ -10,6 +10,7 @@
     <Compile Include="ByteViews.fs" />
     <Compile Include="XmlViewEngine.fs" />
     <Compile Include="TemplateViewEngine.fs" />
+    <Compile Include="TemplateViews.fs" />
     <Compile Include="XmlViews.fs" />
     <Compile Include="Program.fs"/>
   </ItemGroup>
