@@ -1,15 +1,18 @@
-module ByteViewEngine
+module ByteViewEngineAsync
 open System.Text
 open System.IO
 open System
 open System.Xml
+open System.Threading.Tasks
+open Giraffe.Tasks
+
 
 type Stream with
-    member inline x.Write(buffer:byte []) = x.Write(buffer,0,buffer.Length)
-    member inline x.Write(value:string) = let buffer = value |> Encoding.UTF8.GetBytes in x.Write(buffer,0,buffer.Length)
+    member inline x.WriteAsync(buffer:byte []) = x.WriteAsync(buffer,0,buffer.Length)
+    member inline x.WriteAsync(value:string) = let buffer = value |> Encoding.UTF8.GetBytes in x.WriteAsync(buffer,0,buffer.Length)
 
-type VNode = (list<Stream -> unit>) -> Stream -> unit
-type PNode = (list<Stream -> unit>) -> VNode
+type VNode = (list<Stream -> Task>) -> Stream -> Task
+type PNode = (list<Stream -> Task>) -> VNode
 
 let attrClosetTag = ">" |> Encoding.UTF8.GetBytes
 let voidCloseTag = " />" |> Encoding.UTF8.GetBytes
@@ -17,40 +20,50 @@ let commentOpenTag = "<!-- " |> Encoding.UTF8.GetBytes
 let commentCloseTag = " -->" |> Encoding.UTF8.GetBytes
 let equalsTag = "=" |> Encoding.UTF8.GetBytes
 
-let attr (key:string) (value:string) (wr:Stream) =
-    key |> Encoding.UTF8.GetBytes |> wr.Write
-    wr.Write(equalsTag,0,equalsTag.Length)
-    value |> Encoding.UTF8.GetBytes |> wr.Write
+let attr (key:string) (value:string) (wr:Stream) = 
+    task {
+        do! key |> Encoding.UTF8.GetBytes |> wr.WriteAsync
+        do! wr.WriteAsync(equalsTag,0,equalsTag.Length)
+        return! value |> Encoding.UTF8.GetBytes |> wr.WriteAsync
+    } :> Task
+
 
 let attrbool (key:string) (wr:Stream) =
-    wr.Write key
+    wr.WriteAsync key
 
-let parentNode (tag:string) : (list<Stream -> unit>) -> (list<Stream -> unit>) -> Stream -> unit  = 
+let parentNode (tag:string) : (list<Stream -> Task>) -> (list<Stream -> Task>) -> Stream -> Task  = 
     let opentag = ("<" + tag) |> Encoding.UTF8.GetBytes
     let closetag = ("</" + tag + ">") |> Encoding.UTF8.GetBytes
-    fun (attrs:list<Stream -> unit>) (children:list<Stream -> unit>) (wr:Stream) ->
-        wr.Write (opentag,0,opentag.Length)
-        for attr in attrs do
-            attr wr
-        wr.Write attrClosetTag
-        for child in children do
-            child wr
-        wr.Write closetag
+    fun (attrs:list<Stream -> Task>) (children:list<Stream -> Task>) (wr:Stream) -> 
+        task {
+            do! wr.WriteAsync opentag
+            for attr in attrs do
+                do! attr wr
+            do! wr.WriteAsync attrClosetTag
+            for child in children do
+                do! child wr
+            return! wr.WriteAsync closetag        
+        } :> Task
 
-let voidNode (tag:string) : ((Stream -> unit) list) -> Stream -> unit   = 
+
+let voidNode (tag:string) : ((Stream -> Task) list) -> Stream -> Task   = 
     let opentag = ("<" + tag) |> Encoding.UTF8.GetBytes
-    fun (attrs:(Stream -> unit) list) (wr:Stream) ->
-        wr.Write opentag
-        for attr in attrs do
-            attr wr
-        wr.Write voidCloseTag
+    fun (attrs:(Stream -> Task) list) (wr:Stream) -> 
+        task {
+            do! wr.WriteAsync opentag
+            for attr in attrs do
+                do! attr wr
+            return! wr.WriteAsync voidCloseTag
+        } :> Task
 
-let encodedText (txt:string) (wr:Stream) = wr.Write txt // include encoder
-let rawText (txt:string) (wr:Stream) = wr.Write txt
+let encodedText (txt:string) (wr:Stream) = wr.WriteAsync txt // include encoder
+let rawText (txt:string) (wr:Stream) = wr.WriteAsync txt
 let comment (txt:string) (wr:Stream) = 
-    wr.Write commentOpenTag
-    wr.Write txt
-    wr.Write commentCloseTag
+    task {
+        do! wr.WriteAsync commentOpenTag
+        do! wr.WriteAsync txt
+        return! wr.WriteAsync commentCloseTag
+    } :> Task
 
 let html : PNode         =  parentNode "html"
 let ``base`` : VNode     =  voidNode "base"
@@ -166,7 +179,9 @@ let summary : PNode      =  parentNode "summary"
 let private docTypeTag = "<!DOCTYPE html>" |> Encoding.UTF8.GetBytes
 let private newLineTag = Environment.NewLine |> Encoding.UTF8.GetBytes
 
-let renderHtmlDocument ( document : Stream -> unit ) (writer : Stream) =
-    writer.Write docTypeTag
-    document writer 
-    writer.Write newLineTag
+let renderHtmlDocument ( document : Stream -> Task ) (writer : Stream) = 
+    task {
+        do! writer.WriteAsync docTypeTag
+        do! document writer 
+        return! writer.WriteAsync newLineTag
+    } :> Task

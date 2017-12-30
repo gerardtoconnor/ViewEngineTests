@@ -1,6 +1,6 @@
-module GiraffeViews
+module ByteViewsAsync
 
-open GiraffeViewEngine
+open ByteViewEngineAsync
 open Common
 
 let view1 () = div [] [

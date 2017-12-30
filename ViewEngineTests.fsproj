@@ -4,17 +4,21 @@
     <TargetFramework>netcoreapp2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="GiraffeViewEngine.fs" />
-    <Compile Include="ByteViewEngine.fs" />
-    <Compile Include="GiraffeViews.fs" />
-    <Compile Include="ByteViews.fs" />
-    <Compile Include="XmlViewEngine.fs" />
-    <Compile Include="TemplateViewEngine.fs" />
-    <Compile Include="TemplateViews.fs" />
-    <Compile Include="XmlViews.fs" />
+    <Compile Include="Common.fs"/>
+    <Compile Include="GiraffeViewEngine.fs"/>
+    <Compile Include="ByteViewEngine.fs"/>
+    <Compile Include="ByteViewEngineAsync.fs"/>
+    <Compile Include="ByteViewsAsync.fs"/>
+    <Compile Include="GiraffeViews.fs"/>
+    <Compile Include="ByteViews.fs"/>
+    <Compile Include="XmlViewEngine.fs"/>
+    <Compile Include="TemplateViewEngine.fs"/>
+    <Compile Include="TemplateViews.fs"/>
+    <Compile Include="XmlViews.fs"/>
     <Compile Include="Program.fs"/>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.10.11"/>
+    <PackageReference Include="Giraffe.Tasks" Version="0.1.0-beta-010"/>
   </ItemGroup>
 </Project>

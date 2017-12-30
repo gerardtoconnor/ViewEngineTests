@@ -6,11 +6,11 @@ open System.Net
 /////////// Testing
 
 type CompiledNode<'T> =
-| CText of string // byte []
+| CText of byte []
 | CAttr of ('T -> string * string)
 | CBind of ('T -> string)
 | CBindIf of ('T -> bool) * CompiledNode<'T> [] * CompiledNode<'T> []
-| CBindFor of ('T * StreamWriter -> unit)
+| CBindFor of ('T * Stream -> unit)
 
 type XmlAttr<'T> =
 | KeyValue of string * string
@@ -23,14 +23,16 @@ type XmlNode<'T> =
 | RawText of string
 | Bind of ('T -> string)
 | BindIf of ('T -> bool) * CompiledNode<'T> [] * CompiledNode<'T> []
-| BindFor of ('T * StreamWriter -> unit)
+| BindFor of ('T * Stream -> unit)
 
-//let inline (+>) (str:string) (ls: byte []) = Encoding.UTF8.GetBytes str 
+//let inline (+>) (str:string) (ls: byte []) = Encoding.UTF8.GetBytes str
+
+let inline toUTF8 (v:string) = Encoding.UTF8.GetBytes v
 
 let writeFlush (sb:StringBuilder,acc:CompiledNode<'T> list) =
     if sb.Length > 0 
     then 
-        let nacc = (sb.ToString() (*|> Encoding.UTF8.GetBytes*) |> CText) :: acc
+        let nacc = (sb.ToString() |> toUTF8 |> CText) :: acc
         sb.Clear() |> ignore
         nacc
     else acc      
@@ -83,11 +85,11 @@ let compile (raw:XmlNode<'T>) : CompiledNode<'T> [] =
     roll (acc',result.Length - 1)
     result
 
-let rec processNodes (item:'T,sw:StreamWriter,nodes:CompiledNode<'T> [] ) =
+let rec processNodes (item:'T,sw:Stream,nodes:CompiledNode<'T> [] ) =
     for node in nodes do
         match node with                
-        | CText v -> sw.Write v
-        | CBind fn -> sw.Write ( fn item )
+        | CText v -> sw.Write(v,0,v.Length) //.Write v
+        | CBind fn -> let ba = item |> fn |> toUTF8 in sw.Write (ba,0,ba.Length)
         | CBindIf (pred,trueFns,falseFns) ->
             if pred item then
                 processNodes(item,sw,trueFns)
@@ -97,7 +99,7 @@ let rec processNodes (item:'T,sw:StreamWriter,nodes:CompiledNode<'T> [] ) =
 
 let inline bindFor<'T> (enumFn:'T -> #seq<'U>) (template:XmlNode<'U>) =
     let compiledNodes = compile template
-    BindFor (fun (model:'T,sw:StreamWriter) ->
+    BindFor (fun (model:'T,sw:Stream) ->
         for item in enumFn model do
             processNodes(item,sw,compiledNodes)
     )
@@ -224,5 +226,5 @@ let inline rawText txt              = RawText(txt)
 let inline comment txt              = RawText("<!-- " + txt + " -->")
 
 
-let inline renderHtmlDocument (model:'T) ( document : CompiledNode<'T> []) (writer : StreamWriter) =
+let inline renderHtmlDocument (model:'T) ( document : CompiledNode<'T> []) (writer : #Stream) =
     processNodes(model,writer,document) 
