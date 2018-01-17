@@ -34,16 +34,16 @@ type ViewTests() =
 
     [<Benchmark>]
     member x.GiraffeView () = 
-        use fs = new MemoryStream(buffer)
-        //use fs =  new FileStream(dir + @"giraffeView1.html",FileMode.OpenOrCreate)
+        //use fs = new MemoryStream(buffer)
+        use fs =  new FileStream(dir + @"giraffeView1.html",FileMode.OpenOrCreate)
         use writer = new StreamWriter(fs)
         let document = GiraffeViews.personView person
         GiraffeViewEngine.renderHtmlDocument document writer |> ignore
 
     [<Benchmark>]
     member x.XmlView () =
-        use fs = new MemoryStream(buffer)
-        //use fs =  new FileStream(dir + @"XmlView1.html",FileMode.OpenOrCreate)
+        //use fs = new MemoryStream(buffer)
+        use fs =  new FileStream(dir + @"XmlView1.html",FileMode.OpenOrCreate)
         use writer = new StreamWriter(fs)
         let document = XmlViews.personView person
         let str = XmlViewEngine.renderHtmlDocument document 
@@ -70,8 +70,8 @@ type ViewTests() =
 
     [<Benchmark>]
     member x.TemplateView () = 
-        use fs = new MemoryStream(buffer)
-        //use fs =  new FileStream(dir + @"TemplateView1.html",FileMode.OpenOrCreate)
+        //use fs = new MemoryStream(buffer)
+        use fs =  new FileStream(dir + @"TemplateView1.html",FileMode.OpenOrCreate)
         let document = TemplateViews.personView
         TemplateViewEngine.renderHtmlDocument person document fs
 
