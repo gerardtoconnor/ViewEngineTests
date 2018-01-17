@@ -2,7 +2,7 @@ Testing various alternative view engine implimentations
 
 - XmlView - original Suave style template
 - GiraffeView - struct/enum variation
-- ByteView - lightwieght streamwriter nodes
+- ByteView - lightweight streamwriter nodes
 - TemplateView - Alt syntax templateing engine of compiled components 
 
 1 - using memory stream to assess raw performance without IO 
